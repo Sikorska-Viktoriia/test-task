@@ -4,7 +4,7 @@ from .database import engine
 from .models import Base
 
 from .routers import projects
-# from .routers import places
+from .routers import places
 
 Base.metadata.create_all(bind=engine)
 
@@ -13,4 +13,4 @@ app = FastAPI(
 )
 
 app.include_router(projects.router)
-# app.include_router(places.router)
+app.include_router(places.router)
