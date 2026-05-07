@@ -1,5 +1,6 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import date
+
 
 
 class PlaceCreate(BaseModel):
@@ -13,13 +14,14 @@ class PlaceUpdate(BaseModel):
 
 class PlaceResponse(BaseModel):
     id: int
+    project_id: int
     external_id: int
     title: str
-    notes: str | None
     visited: bool
+    notes: str | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
 
 
 class ProjectCreate(BaseModel):
@@ -38,10 +40,9 @@ class ProjectUpdate(BaseModel):
 class ProjectResponse(BaseModel):
     id: int
     name: str
-    description: str | None
+    description: str | None = None
+    start_date: date | None = None
     completed: bool
-
     places: list[PlaceResponse] = []
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

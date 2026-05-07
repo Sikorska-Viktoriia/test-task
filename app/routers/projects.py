@@ -1,127 +1,105 @@
-from fastapi import APIRouter
-from fastapi import Depends
-from fastapi import HTTPException
-
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from ..database import SessionLocal
-from ..models import TravelProject
-from ..schemas import ProjectCreate
-from ..schemas import ProjectResponse
-from ..schemas import ProjectUpdate
 from ..dependencies import get_db
+from ..models import TravelProject, ProjectPlace
+from ..schemas import ProjectCreate, ProjectResponse, ProjectUpdate
+from ..services.artic_api import get_artwork
+from ..services.project_service import update_project_completion
 
-router = APIRouter(
-    prefix="/projects",
-    tags=["Projects"]
-)
+router = APIRouter(prefix="/projects", tags=["projects"])
 
 
 @router.post("/", response_model=ProjectResponse)
-def create_project(
-    project: ProjectCreate,
-    db: Session = Depends(get_db)
-):
+def create_project(payload: ProjectCreate, db: Session = Depends(get_db)):
 
-    new_project = TravelProject(
-        name=project.name,
-        description=project.description,
-        start_date=project.start_date
+    project = TravelProject(
+        name=payload.name,
+        description=payload.description,
+        start_date=payload.start_date,
+        completed=False
     )
 
-    db.add(new_project)
+    db.add(project)
+    db.flush()  
 
+    for place in payload.places:
+
+        count = db.query(ProjectPlace).filter_by(project_id=project.id).count()
+        if count >= 10:
+            raise HTTPException(400, "Max 10 places allowed per project")
+
+        existing = db.query(ProjectPlace).filter_by(
+            project_id=project.id,
+            external_id=place.external_id
+        ).first()
+
+        if existing:
+            continue
+
+        artwork = get_artwork(place.external_id)
+        if not artwork:
+            raise HTTPException(404, f"Artwork {place.external_id} not found")
+
+        db.add(ProjectPlace(
+            project_id=project.id,
+            external_id=place.external_id,
+            title=artwork["title"],
+            visited=False,
+            notes=None
+        ))
+
+    update_project_completion(db, project)
     db.commit()
+    db.refresh(project)
 
-    db.refresh(new_project)
-
-    return new_project
+    return project
 
 
 @router.get("/", response_model=list[ProjectResponse])
-def list_projects(
-    db: Session = Depends(get_db)
-):
-
+def get_projects(db: Session = Depends(get_db)):
     return db.query(TravelProject).all()
 
 @router.get("/{project_id}", response_model=ProjectResponse)
-def get_project(
-    project_id: int,
-    db: Session = Depends(get_db)
-):
+def get_project(project_id: int, db: Session = Depends(get_db)):
 
-    project = db.query(TravelProject).filter(
-        TravelProject.id == project_id
-    ).first()
+    project = db.query(TravelProject).filter_by(id=project_id).first()
 
     if not project:
-        raise HTTPException(
-            status_code=404,
-            detail="Project not found"
-        )
+        raise HTTPException(404, "Project not found")
 
     return project
 
 
 @router.patch("/{project_id}", response_model=ProjectResponse)
-def update_project(
-    project_id: int,
-    updated_data: ProjectUpdate,
-    db: Session = Depends(get_db)
-):
+def update_project(project_id: int, payload: ProjectUpdate, db: Session = Depends(get_db)):
 
-    project = db.query(TravelProject).filter(
-        TravelProject.id == project_id
-    ).first()
+    project = db.query(TravelProject).filter_by(id=project_id).first()
 
     if not project:
-        raise HTTPException(
-            status_code=404,
-            detail="Project not found"
-        )
+        raise HTTPException(404, "Project not found")
 
-    if updated_data.name is not None:
-        project.name = updated_data.name
-
-    if updated_data.description is not None:
-        project.description = updated_data.description
-
-    if updated_data.start_date is not None:
-        project.start_date = updated_data.start_date
+    for k, v in payload.dict(exclude_unset=True).items():
+        setattr(project, k, v)
 
     db.commit()
-
     db.refresh(project)
 
     return project
 
-@router.delete("/{project_id}", status_code=204)
-def delete_project(
-    project_id: int,
-    db: Session = Depends(get_db)
-):
 
-    project = db.query(TravelProject).filter(
-        TravelProject.id == project_id
-    ).first()
+@router.delete("/{project_id}")
+def delete_project(project_id: int, db: Session = Depends(get_db)):
+
+    project = db.query(TravelProject).filter_by(id=project_id).first()
 
     if not project:
-        raise HTTPException(
-            status_code=404,
-            detail="Project not found"
-        )
+        raise HTTPException(404, "Project not found")
 
-    visited_places = any(
-        place.visited for place in project.places
-    )
-
-    if visited_places:
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot delete project with visited places"
-        )
+    if any(p.visited for p in project.places):
+        raise HTTPException(400, "Cannot delete project with visited places")
 
     db.delete(project)
-
     db.commit()
+
+    return {"message": "Project deleted"}
