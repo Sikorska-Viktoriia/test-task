@@ -1,0 +1,133 @@
+{
+    "info": {
+        "_postman_id": "travel-planner-api",
+        "name": "Travel Planner API",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [{
+            "key": "base_url",
+            "value": "http://localhost:8000"
+        },
+        {
+            "key": "project_id",
+            "value": "1"
+        },
+        {
+            "key": "place_id",
+            "value": "1"
+        }
+    ],
+    "item": [
+
+        {
+            "name": "Projects",
+            "item": [
+
+                {
+                    "name": "Create Project (with places)",
+                    "request": {
+                        "method": "POST",
+                        "header": [{ "key": "Content-Type", "value": "application/json" }],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Europe Trip\",\n  \"description\": \"Summer trip\",\n  \"start_date\": \"2026-06-01\",\n  \"places\": [\n    {\"external_id\": 129884},\n    {\"external_id\": 27992}\n  ]\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/projects/",
+                            "host": ["{{base_url}}"],
+                            "path": ["projects", ""]
+                        }
+                    }
+                },
+
+                {
+                    "name": "Get All Projects",
+                    "request": {
+                        "method": "GET",
+                        "url": "{{base_url}}/projects/"
+                    }
+                },
+
+                {
+                    "name": "Get Project By ID",
+                    "request": {
+                        "method": "GET",
+                        "url": "{{base_url}}/projects/{{project_id}}"
+                    }
+                },
+
+                {
+                    "name": "Update Project",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [{ "key": "Content-Type", "value": "application/json" }],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Updated Trip\",\n  \"description\": \"Updated\"\n}"
+                        },
+                        "url": "{{base_url}}/projects/{{project_id}}"
+                    }
+                },
+
+                {
+                    "name": "Delete Project",
+                    "request": {
+                        "method": "DELETE",
+                        "url": "{{base_url}}/projects/{{project_id}}"
+                    }
+                }
+
+            ]
+        },
+
+        {
+            "name": "Places",
+            "item": [
+
+                {
+                    "name": "Add Place",
+                    "request": {
+                        "method": "POST",
+                        "header": [{ "key": "Content-Type", "value": "application/json" }],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"external_id\": 129884\n}"
+                        },
+                        "url": "{{base_url}}/projects/{{project_id}}/places"
+                    }
+                },
+
+                {
+                    "name": "Get All Places",
+                    "request": {
+                        "method": "GET",
+                        "url": "{{base_url}}/projects/{{project_id}}/places"
+                    }
+                },
+
+                {
+                    "name": "Get Single Place",
+                    "request": {
+                        "method": "GET",
+                        "url": "{{base_url}}/projects/{{project_id}}/places/{{place_id}}"
+                    }
+                },
+
+                {
+                    "name": "Update Place (notes + visited)",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [{ "key": "Content-Type", "value": "application/json" }],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"notes\": \"Must visit\",\n  \"visited\": true\n}"
+                        },
+                        "url": "{{base_url}}/projects/{{project_id}}/places/{{place_id}}"
+                    }
+                }
+
+            ]
+        }
+
+    ]
+}
